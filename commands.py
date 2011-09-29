@@ -30,8 +30,11 @@ def execute(**kargs):
 	        shutil.copyfile(os.path.join(module, "Capfile"), os.path.join(app.path, "Capfile"))
 	        print "Copying Capistrano Play recipes..."
 	        shutil.copyfile(os.path.join(module, "conf", "play-recipes.rb"), os.path.join(app.path, "conf", "play-recipes.rb"))
-	        print "Copying Capistrano Play deploy config..."
-	        shutil.copyfile(os.path.join(module, "conf", "deploy.rb"), os.path.join(app.path, "conf", "deploy.rb"))
+		
+		if(not os.path.exists(os.path.join(app.path, "conf", "deploy.rb"))):
+			print "Copying Capistrano Play deploy config..."
+		        shutil.copyfile(os.path.join(module, "conf", "deploy.rb"), os.path.join(app.path, "conf", "deploy.rb"))
+		else: print "Capistrano Play deploy config already exists so NOT copying it..."
 	        print "Copying Play remote background launcher script..."
 	        shutil.copyfile(os.path.join(module, "run.sh"), os.path.join(app.path, "run.sh"))
 	        print "Now go edit your remote configs in conf/deploy.rb"

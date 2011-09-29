@@ -15,7 +15,7 @@ default_run_options[:pty] = true
 
 namespace :deploy do
   task :start do
-    run "rm -f #{app_pid}; cd #{app_path}; PLAY_PATH=#{play_path} PLAY_CMD=start nohup ./run.sh -Xss2048k --deps --pid_file=#{app_pid} --%prod 2>&1 >/dev/null" 
+    run "rm -f #{app_pid}; cd #{app_path}; chmod u+x run.sh; PLAY_PATH=#{play_path} PLAY_CMD=start nohup ./run.sh -Xss2048k --deps --pid_file=#{app_pid} --%prod 2>&1 >/dev/null" 
   end
 
   task :restart do
@@ -29,14 +29,29 @@ namespace :deploy do
 end
 
 namespace :play do
+  desc "view play pid"
+  task :pid do
+    run "cd #{app_path}; #{play_path}/play pid --pid_file=#{app_pid}"
+  end
+
+  desc "view play status"
+  task :status do
+    run "cd #{app_path}; #{play_path}/play status --pid_file=#{app_pid}"
+  end	
+
+  desc "view play version"
+  task :version do
+    run "cd #{app_path}; #{play_path}/play version --pid_file=#{app_pid}"
+  end	
+
   desc "view running play apps"
-  task :viewprocess do
-    run "#{sudo} ps -ef | grep 'play/framework'"
+  task :ps do
+    run "ps -eaf | grep 'play'"
   end
 
   desc "kill play processes"
   task :kill do
-    run "#{sudo} ps -ef | grep 'play/framework' | grep -v 'grep' | awk '{print $2}'| xargs -i kill {} ; echo ''"
+    run "ps -ef | grep 'play' | grep -v 'grep' | awk '{print $2}'| xargs -i kill {} ; echo ''"
   end
 
   desc "view logfiles"
