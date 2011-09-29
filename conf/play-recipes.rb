@@ -10,6 +10,9 @@
 #   end
 # end
 
+# without this, there are problems with sudo on remote server
+default_run_options[:pty] = true
+
 namespace :deploy do
   task :start do
     run "rm -f #{app_pid}; cd #{app_path}; PLAY_PATH=#{play_path} PLAY_CMD=start nohup ./run.sh -Xss2048k --deps --pid_file=#{app_pid} --%prod 2>&1 >/dev/null" 
