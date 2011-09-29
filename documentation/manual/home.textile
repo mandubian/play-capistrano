@@ -1,0 +1,90 @@
+h1. Play Capistrano Module
+
+bq. *Very draft of the module, contributions are welcome*
+
+This is a very first draft of a Play module allowing to deploy easily a play app on a remote server with "Capistrano":https://github.com/capistrano/capistrano/wiki/Documentation-v2.x, this marvelous remote control tool!
+Capistrano is written in Ruby and if you are like me, a complete noob in Ruby, you certainly don't want to write any line of Ruby within a Play application.
+This module is aimed at that without preventing people more skilled in Capistrano and Ruby to do what they want.
+
+h2. How-To
+
+h2. Install/Learn Capistrano
+
+I had problems using Ubuntu Synaptic packages so I installed manually with RVM and this is perfect. Go "there":http://beginrescueend.com/rvm/install/
+
+To learn the basics of Capistrano, go "there":https://github.com/capistrano/capistrano/wiki/2.x-From-The-Beginning
+
+h2. Install Play Capistrano module in your _conf/dependencies.yml_
+
+bc. play -> capistrano 1.0.0
+
+bq. Don't forget to run the traditional @play deps@
+
+h2. Run the *play capify* command
+
+Play-Capistrano module is delivered with one single command for the time being:
+
+bc. play capify
+
+This command copies the following required Capistrano files to your project _(this is not perfect because it duplicates files from module)_:
+* *Capfile* : the file expected by Capistrano containing the main entry point for it
+* *conf/play-recipes.rb* : the _deploy_ commands traditionaly provided by capistrano and tuned to Play
+* *conf/deploy.rb* : the specific configuration file containing the remote servers/VCS addresses *YOU MUST EDIT THIS FILE AND PUT YOUR CONFIG IN IT*
+* *run.sh* : a simple shell file (yes only linux support currently) containing the command to launch Play server in background. 
+
+bq. For an unknown reason, it's impossible to run a background shell command from capistrano directly and you must wrap it into a shell.
+
+
+h2. Edit conf/deploy.rb with your remote/VCS config
+
+Just edit the file and replace parts in UPPER CASE
+
+h2. Then you enter into Capistrano world...
+
+A few links:
+* "Beginner tutorial":https://github.com/capistrano/capistrano/wiki/2.x-From-The-Beginning
+* "Deploy lifecycle":https://github.com/mpasternacki/capistrano-documentation-support-files/raw/master/default-execution-path/Capistrano%20Execution%20Path.jpg
+
+
+h2. The tweaked Capistrano Play recipes
+
+Thanks to "this Stackoverflow post":http://stackoverflow.com/questions/7416662/capistrano-and-playframework for giving me a very good ground knowing my complete incompetence in Ruby:
+
+h3. cap deploy:start
+
+This remote start the server in nohup using the run.sh to make it background.
+
+h3. cap deploy:stop
+
+This remote stops the server.
+
+h3. cap deploy:restart
+
+This remote stops/starts the server.
+
+h3. cap play:logs
+
+This "tail -f" remote logs.
+
+h3. cap play:kill 
+
+This kills the remote server.
+
+h3. cap play:ps
+
+This view remote process info.
+
+h3. cap play:pid
+
+This retrieves play application pid.
+
+h3. cap play:status
+
+This retrieves play application status.
+
+h3. cap play:version
+
+This retrieves play application version.
+
+
+
