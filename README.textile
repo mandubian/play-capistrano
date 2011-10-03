@@ -2,6 +2,8 @@ h1. Play Capistrano Module
 
 bq. *Very draft of the module, contributions are welcome*
 
+*This module is released under "Apache License 2.0":http://www.apache.org/licenses/LICENSE-2.0.html*
+
 This is a very first draft of a Play module allowing to deploy easily a play app on a remote server with "Capistrano":https://github.com/capistrano/capistrano/wiki/Documentation-v2.x, this marvelous remote control tool!
 Capistrano is written in Ruby and if you are like me, a complete noob in Ruby, you certainly don't want to write any line of Ruby within a Play application.
 This module is aimed at that without preventing people more skilled in Capistrano and Ruby to do what they want.
