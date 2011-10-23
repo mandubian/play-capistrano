@@ -52,6 +52,10 @@ h2. The tweaked Capistrano Play recipes
 
 Thanks to "this Stackoverflow post":http://stackoverflow.com/questions/7416662/capistrano-and-playframework for giving me a very good ground knowing my complete incompetence in Ruby:
 
+h2. Deploying to Multiple Environments
+
+You can also use Capistrano to deploy to multiple environments (staging, production, etc). For more information, please see this "tutorial":https://github.com/capistrano/capistrano/wiki/2.x-Multiple-Stages-Without-Multistage-Extension which goes over the changes necessary on play-recipes.rb you need to make to deploy to multiple environments without the multistage extension.
+
 h3. cap deploy:start
 
 This remote start the server in nohup using the run.sh to make it background.
