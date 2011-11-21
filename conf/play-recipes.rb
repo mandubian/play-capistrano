@@ -38,7 +38,7 @@ namespace :deploy do
   end
 
   task :stop do
-    run "#{play_path}/play stop #{app_path} --pid_file=#{app_pid}"
+    run "cd #{app_path}; PLAY_PATH=#{play_path} PLAY_PID=#{app_pid} PLAY_APP=#{app_path} . ./stop.sh"
   end
 end
 

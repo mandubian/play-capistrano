@@ -50,6 +50,7 @@ def execute(**kargs):
 		else: print "Capistrano Play deploy config already exists so NOT copying it..."
 	        print "Copying Play remote background launcher script..."
 	        shutil.copyfile(os.path.join(module, "run.sh"), os.path.join(app.path, "run.sh"))
+	        shutil.copyfile(os.path.join(module, "stop.sh"), os.path.join(app.path, "stop.sh"))
 	        print "Now go edit your remote configs in conf/deploy.rb"
         #print "~ Use: --css to override the Secure css"       
         #print "~ "
