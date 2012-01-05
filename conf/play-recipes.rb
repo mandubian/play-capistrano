@@ -69,8 +69,8 @@ namespace :play do
   end
 
   desc "view logfiles"
-  task :logs, :roles => :app do
-    run "tail -f #{shared_path}/log/#{application}.log" do |channel, stream, data|
+  task :logs do
+    run "tail -f #{app_path}/logs/system.out" do |channel, stream, data|
       puts  # for an extra line break before the host name
       puts "#{channel[:host]}: #{data}"
       break if stream == :err
