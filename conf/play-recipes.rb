@@ -63,6 +63,9 @@ namespace :play do
   _cset :play_daemon do
     daemonize.__send__(play_daemonize_method)
   end
+  _cset :play_pid_file do
+    fetch(:app_pid, File.join(shared_path, 'pids', 'server.pid')) # for backward compatibility
+  end
 
   namespace :setup do
     desc "install play if needed"
@@ -127,12 +130,12 @@ namespace :play do
       end
 
       task :start, :roles => :app, :except => { :no_release => true } do
-        run "rm -f #{app_pid}" # FIXME: should check if the pid is active
-        run "cd #{current_path} && nohup #{play_cmd} start -Xss2048k --deps --pid_file=#{app_pid} --%prod"
+        run "rm -f #{play_pid_file}" # FIXME: should check if the pid is active
+        run "cd #{current_path} && nohup #{play_cmd} start -Xss2048k --deps --pid_file=#{play_pid_file} --%prod"
       end
 
       task :stop, :roles => :app, :except => { :no_release => true } do
-        run "cd #{current_path} && #{play_cmd} stop --pid_file=#{app_pid}"
+        run "cd #{current_path} && #{play_cmd} stop --pid_file=#{play_pid_file}"
       end
 
       task :restart, :roles => :app, :except => { :no_release => true } do
@@ -141,7 +144,7 @@ namespace :play do
       end
 
       task :status, :roles => :app, :except => { :no_release => true } do
-        run "cd #{app_path} && #{play_cmd} status --pid_file=#{app_pid}"
+        run "cd #{current_path} && #{play_cmd} status --pid_file=#{play_pid_file}"
       end	
     end
 
@@ -207,12 +210,12 @@ namespace :play do
 
   desc "view play pid"
   task :pid, :roles => :app, :except => { :no_release => true } do
-    run "cd #{current_path} && #{play_cmd} pid --pid_file=#{app_pid}"
+    run "cd #{current_path} && #{play_cmd} pid --pid_file=#{play_pid_file}"
   end
 
   desc "view play version"
   task :version, :roles => :app, :except => { :no_release => true } do
-    run "cd #{current_path} && #{play_cmd} version --pid_file=#{app_pid}"
+    run "cd #{current_path} && #{play_cmd} version --pid_file=#{play_pid_file}"
   end	
 
   desc "view running play apps"
