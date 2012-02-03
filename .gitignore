@@ -7,3 +7,5 @@ lib
 .project
 .classpath
 dist
+*.pyc
+*.pyo
