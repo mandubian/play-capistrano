@@ -41,6 +41,8 @@ namespace :deploy do
   end
 end
 
+after 'deploy:setup', 'play:setup'
+
 namespace :play do
   _cset :play_version, '1.2.4'
   _cset :play_zip_url do
@@ -149,7 +151,7 @@ namespace :play do
         application
       end
       _cset :play_upstart_config do
-        File.join('/etc', 'init', "#{play_upstart_service}.cfg")
+        File.join('/etc', 'init', "#{play_upstart_service}.conf")
       end
       _cset :play_upstart_config_template, File.join(File.dirname(__FILE__), 'templates', 'upstart.erb')
       _cset :play_upstart_options, %w(--deps)
