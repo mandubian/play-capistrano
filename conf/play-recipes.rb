@@ -52,8 +52,7 @@ namespace :play do
     File.join(shared_path, "play-#{play_version}.zip")
   end
   _cset :play_path do
-#   File.join(shared_path, "play-#{play_version}")
-    abort "you must specify install path for play"
+    File.join(shared_path, "play-#{play_version}")
   end
   _cset :play_cmd do
     File.join(play_path, 'play')
@@ -101,15 +100,15 @@ namespace :play do
         run "#{try_sudo} rm -rf #{files.join(' ')}"
       }
       run "#{try_sudo} rm -f #{play_zip_file}" unless play_preserve_zip
-      
+
       temp_zip = File.join('/tmp', File.basename(play_zip_file))
       temp_dir = File.join('/tmp', File.basename(play_zip_file, '.zip'))
       run <<-E
-        if ! test -d #{play_path}; then
-          (test -f #{play_zip_file} || wget --no-verbose -O #{temp_zip} #{play_zip_url}; true) &&
-          unzip #{temp_zip} -d /tmp && #{try_sudo} mv -f #{temp_dir} #{play_path} &&
-          test -x #{play_path}/play;
-        fi
+        ( test -f #{play_zip_file} ||
+          ( wget --no-verbose -O #{temp_zip} #{play_zip_url} && #{try_sudo} mv -f #{temp_zip} #{play_zip_file}; true ) ) &&
+        ( test -d #{play_path} ||
+          ( unzip #{play_zip_file} -d /tmp && #{try_sudo} mv -f #{temp_dir} #{play_path}; true ) ) &&
+        test -x #{play_path}/play;
       E
       run "#{try_sudo} rm -f #{play_zip_file}" unless play_preserve_zip
     end
