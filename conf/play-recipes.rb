@@ -57,6 +57,7 @@ namespace :play do
     File.join(play_path, 'play')
   end
   _cset :play_preserve_zip, true
+  _cset :play_modules, []
   _cset :play_daemonize_method, :play
   _cset :play_daemon do
     daemonize.__send__(play_daemonize_method)
@@ -67,6 +68,9 @@ namespace :play do
     task :default do
       transaction {
         install_play
+        install_modules
+      }
+      transaction {
         play_daemon.setup
       }
     end
@@ -85,6 +89,12 @@ namespace :play do
         fi
       E
       run "rm -f #{play_zip_file}" unless play_preserve_zip
+    end
+
+    task :install_modules do
+      if 0 < play_modules.length
+        run "#{play_cmd} install #{play_modules.join(' ')}"
+      end
     end
   end
 
@@ -108,14 +118,48 @@ namespace :play do
         start
       end
 
-      desc "view play status"
       task :status do
         run "cd #{app_path} && #{play_cmd} status --pid_file=#{app_pid}"
       end	
     end
 
     namespace :upstart do
-      # not implemented yet
+      _cset :play_upstart_service do
+        application
+      end
+      _cset :play_upstart_config do
+        File.join('/etc', 'init', "#{play_upstart_service}.cfg")
+      end
+      _cset :play_upstart_config_template, File.join(File.dirname(__FILE__), 'templates', 'upstart.erb')
+      _cset :play_upstart_options, %w(--deps)
+      _cset :play_upstart_runner do
+        user
+      end
+
+      task :setup do
+        template = File.read(play_upstart_config_template)
+        result = ERB.new(template).result(binding)
+
+        tempfile = File.join('/tmp', File.basename(play_upstart_config))
+        put result, tempfile
+        run "diff #{tempfile} #{play_upstart_config} || #{sudo} mv -f #{tempfile} #{play_upstart_config}"
+      end
+
+      task :start do
+        run "#{sudo} service #{play_upstart_service} start"
+      end
+
+      task :stop do
+        run "#{sudo} service #{play_upstart_service} stop"
+      end
+
+      task :restart do
+        run "#{sudo} service #{play_upstart_service} restart || #{sudo} service #{play_upstart_service} start"
+      end
+
+      task :status do
+        run "#{sudo} service #{play_upstart_service} status"
+      end
     end
   end
 
