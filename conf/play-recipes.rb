@@ -47,7 +47,7 @@ namespace :play do
     "http://download.playframework.org/releases/#{File.basename(play_zip_file)}"
   end
   _cset :play_zip_file do
-    File.join('/tmp', "play-#{play_version}.zip")
+    File.join(shared_path, "play-#{play_version}.zip")
   end
   _cset :play_path do
 #   File.join(shared_path, "play-#{play_version}")
@@ -96,16 +96,20 @@ namespace :play do
       on_rollback {
         files = [ play_path ]
         files << play_zip_file unless play_preserve_zip
-        run "rm -rf #{files.join(' ')}"
+        run "#{try_sudo} rm -rf #{files.join(' ')}"
       }
-      run "rm -f #{play_zip_file}" unless play_preserve_zip
+      run "#{try_sudo} rm -f #{play_zip_file}" unless play_preserve_zip
+      
+      temp_zip = File.join('/tmp', File.basename(play_zip_file))
+      temp_dir = File.join('/tmp', File.basename(play_zip_file, '.zip'))
       run <<-E
         if ! test -d #{play_path}; then
-          (test -f #{play_zip_file} || wget --no-verbose -o #{play_zip_file} #{play_zip_url}; true) &&
-          unzip #{play_zip_file} -d #{File.dirname(play_path)} && test -x #{play_path}/play;
+          (test -f #{play_zip_file} || wget --no-verbose -O #{temp_zip} #{play_zip_url}; true) &&
+          unzip #{temp_zip} -d /tmp && #{try_sudo} mv -f #{temp_dir} #{play_path} &&
+          test -x #{play_path}/play;
         fi
       E
-      run "rm -f #{play_zip_file}" unless play_preserve_zip
+      run "#{try_sudo} rm -f #{play_zip_file}" unless play_preserve_zip
     end
 
     task :install_modules, :roles => :app, :except => { :no_release => true } do
