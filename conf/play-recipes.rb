@@ -28,15 +28,15 @@
 default_run_options[:pty] = true
 
 namespace :deploy do
-  task :start do
+  task :start, :roles => :app, :except => { :no_release => true } do
     play.start
   end
 
-  task :restart do
+  task :restart, :roles => :app, :except => { :no_release => true } do
     play.restart
   end
 
-  task :stop do
+  task :stop, :roles => :app, :except => { :no_release => true } do
     play.stop
   end
 end
@@ -65,7 +65,7 @@ namespace :play do
 
   namespace :setup do
     desc "install play if needed"
-    task :default do
+    task :default, :except => { :no_release => true } do
       transaction {
         install_play
         install_modules
@@ -75,7 +75,7 @@ namespace :play do
       }
     end
 
-    task :install_play do
+    task :install_play, :roles => :app, :except => { :no_release => true } do
       on_rollback {
         files = [ play_path ]
         files << play_zip_file unless play_preserve_zip
@@ -91,7 +91,7 @@ namespace :play do
       run "rm -f #{play_zip_file}" unless play_preserve_zip
     end
 
-    task :install_modules do
+    task :install_modules, :roles => :app, :except => { :no_release => true } do
       if 0 < play_modules.length
         run "#{play_cmd} install #{play_modules.join(' ')}"
       end
@@ -100,25 +100,25 @@ namespace :play do
 
   namespace :daemonize do
     namespace :play do
-      task :setup do
+      task :setup, :roles => :app, :except => { :no_release => true } do
         # nop
       end
 
-      task :start do
+      task :start, :roles => :app, :except => { :no_release => true } do
         run "rm -f #{app_pid}" # FIXME: should check if the pid is active
         run "cd #{current_path} && nohup #{play_cmd} start -Xss2048k --deps --pid_file=#{app_pid} --%prod"
       end
 
-      task :stop do
+      task :stop, :roles => :app, :except => { :no_release => true } do
         run "cd #{current_path} && #{play_cmd} stop --pid_file=#{app_pid}"
       end
 
-      task :restart do
+      task :restart, :roles => :app, :except => { :no_release => true } do
         stop
         start
       end
 
-      task :status do
+      task :status, :roles => :app, :except => { :no_release => true } do
         run "cd #{app_path} && #{play_cmd} status --pid_file=#{app_pid}"
       end	
     end
@@ -136,7 +136,7 @@ namespace :play do
         user
       end
 
-      task :setup do
+      task :setup, :roles => :app, :except => { :no_release => true } do
         template = File.read(play_upstart_config_template)
         result = ERB.new(template).result(binding)
 
@@ -145,66 +145,66 @@ namespace :play do
         run "diff #{tempfile} #{play_upstart_config} || #{sudo} mv -f #{tempfile} #{play_upstart_config}"
       end
 
-      task :start do
+      task :start, :roles => :app, :except => { :no_release => true } do
         run "#{sudo} service #{play_upstart_service} start"
       end
 
-      task :stop do
+      task :stop, :roles => :app, :except => { :no_release => true } do
         run "#{sudo} service #{play_upstart_service} stop"
       end
 
-      task :restart do
+      task :restart, :roles => :app, :except => { :no_release => true } do
         run "#{sudo} service #{play_upstart_service} restart || #{sudo} service #{play_upstart_service} start"
       end
 
-      task :status do
+      task :status, :roles => :app, :except => { :no_release => true } do
         run "#{sudo} service #{play_upstart_service} status"
       end
     end
   end
 
   desc "start play service"
-  task :start do
+  task :start, :roles => :app, :except => { :no_release => true } do
     play_daemon.start
   end
 
   desc "stop play service"
-  task :stop do
+  task :stop, :roles => :app, :except => { :no_release => true } do
     play_daemon.stop
   end
 
   desc "restart play service"
-  task :restart do
+  task :restart, :roles => :app, :except => { :no_release => true } do
     play_daemon.restart
   end
 
   desc "view play status"
-  task :status do
+  task :status, :roles => :app, :except => { :no_release => true } do
     play_daemon.status
   end	
 
   desc "view play pid"
-  task :pid do
+  task :pid, :roles => :app, :except => { :no_release => true } do
     run "cd #{current_path} && #{play_cmd} pid --pid_file=#{app_pid}"
   end
 
   desc "view play version"
-  task :version do
+  task :version, :roles => :app, :except => { :no_release => true } do
     run "cd #{current_path} && #{play_cmd} version --pid_file=#{app_pid}"
   end	
 
   desc "view running play apps"
-  task :ps do
+  task :ps, :roles => :app, :except => { :no_release => true } do
     run "ps -eaf | grep 'play'"
   end
 
   desc "kill play processes"
-  task :kill do
+  task :kill, :roles => :app, :except => { :no_release => true } do
     run "ps -ef | grep 'play' | grep -v 'grep' | awk '{print $2}'| xargs -i kill {} ; echo ''"
   end
 
   desc "view logfiles"
-  task :logs, :roles => :app do
+  task :logs, :roles => :app, :except => { :no_release => true } do
     run "tail -f #{shared_path}/log/#{application}.log" do |channel, stream, data|
       puts  # for an extra line break before the host name
       puts "#{channel[:host]}: #{data}"
