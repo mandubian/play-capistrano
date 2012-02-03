@@ -29,16 +29,15 @@ default_run_options[:pty] = true
 
 namespace :deploy do
   task :start do
-    run "rm -f #{app_pid}; cd #{app_path}; chmod u+x run.sh; PLAY_PATH=#{play_path} PLAY_CMD=start nohup ./run.sh -Xss2048k --deps --pid_file=#{app_pid} --%prod 2>&1 >/dev/null" 
+    play.start
   end
 
   task :restart do
-    stop
-    start
+    play.restart
   end
 
   task :stop do
-    run "cd #{app_path}; PLAY_PATH=#{play_path} PLAY_PID=#{app_pid} PLAY_APP=#{app_path} . ./stop.sh"
+    play.stop
   end
 end
 
@@ -58,12 +57,17 @@ namespace :play do
     File.join(play_path, 'play')
   end
   _cset :play_preserve_zip, true
+  _cset :play_daemonize_method, :play
+  _cset :play_daemon do
+    daemonize.__send__(play_daemonize_method)
+  end
 
   namespace :setup do
     desc "install play if needed"
     task :default do
       transaction {
         install_play
+        play_daemon.setup
       }
     end
 
@@ -84,19 +88,65 @@ namespace :play do
     end
   end
 
-  desc "view play pid"
-  task :pid do
-    run "cd #{app_path}; #{play_path}/play pid --pid_file=#{app_pid}"
+  namespace :daemonize do
+    namespace :play do
+      task :setup do
+        # nop
+      end
+
+      task :start do
+        run "rm -f #{app_pid}" # FIXME: should check if the pid is active
+        run "cd #{current_path} && nohup #{play_cmd} start -Xss2048k --deps --pid_file=#{app_pid} --%prod"
+      end
+
+      task :stop do
+        run "cd #{current_path} && #{play_cmd} stop --pid_file=#{app_pid}"
+      end
+
+      task :restart do
+        stop
+        start
+      end
+
+      desc "view play status"
+      task :status do
+        run "cd #{app_path} && #{play_cmd} status --pid_file=#{app_pid}"
+      end	
+    end
+
+    namespace :upstart do
+      # not implemented yet
+    end
+  end
+
+  desc "start play service"
+  task :start do
+    play_daemon.start
+  end
+
+  desc "stop play service"
+  task :stop do
+    play_daemon.stop
+  end
+
+  desc "restart play service"
+  task :restart do
+    play_daemon.restart
   end
 
   desc "view play status"
   task :status do
-    run "cd #{app_path}; #{play_path}/play status --pid_file=#{app_pid}"
+    play_daemon.status
   end	
+
+  desc "view play pid"
+  task :pid do
+    run "cd #{current_path} && #{play_cmd} pid --pid_file=#{app_pid}"
+  end
 
   desc "view play version"
   task :version do
-    run "cd #{app_path}; #{play_path}/play version --pid_file=#{app_pid}"
+    run "cd #{current_path} && #{play_cmd} version --pid_file=#{app_pid}"
   end	
 
   desc "view running play apps"
