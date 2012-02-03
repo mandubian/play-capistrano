@@ -67,12 +67,29 @@ namespace :play do
     desc "install play if needed"
     task :default, :except => { :no_release => true } do
       transaction {
+        setup_ivy
         install_play
         install_modules
       }
       transaction {
         play_daemon.setup
       }
+    end
+
+    _cset :play_setup_ivy, false # true if you want to setup custom ivy configuration for play
+    _cset :play_ivy_settings do
+      File.join(capture('echo $HOME').chomp, '.ivy2', 'ivysettings.xml')
+    end
+    _cset :play_ivy_settings_template, File.join(File.dirname(__FILE__), 'templates', 'ivysettings.erb')
+    task :setup_ivy, :roles => :app, :except => { :no_release => true } do
+      if play_setup_ivy
+        template = File.read(play_ivy_settings_template)
+        result = ERB.new(template).result(binding)
+        tempfile = File.join('/tmp', File.basename(play_ivy_settings))
+        run "test -d #{File.dirname(play_ivy_settings)} || mkdir -p #{File.dirname(play_ivy_settings)}"
+        put result, tempfile
+        run "diff #{tempfile} #{play_ivy_settings} || mv -f #{tempfile} #{play_ivy_settings}"
+      end
     end
 
     task :install_play, :roles => :app, :except => { :no_release => true } do
