@@ -42,6 +42,7 @@ namespace :deploy do
 end
 
 after 'deploy:setup', 'play:setup'
+after 'deploy:update', 'play:update'
 
 namespace :play do
   _cset :play_version, '1.2.4'
@@ -131,11 +132,11 @@ namespace :play do
 
       task :start, :roles => :app, :except => { :no_release => true } do
         run "rm -f #{play_pid_file}" # FIXME: should check if the pid is active
-        run "cd #{current_path} && nohup #{play_cmd} start -Xss2048k --deps --pid_file=#{play_pid_file} --%prod"
+        run "cd #{release_path} && nohup #{play_cmd} start -Xss2048k --pid_file=#{play_pid_file} --%prod"
       end
 
       task :stop, :roles => :app, :except => { :no_release => true } do
-        run "cd #{current_path} && #{play_cmd} stop --pid_file=#{play_pid_file}"
+        run "cd #{release_path} && #{play_cmd} stop --pid_file=#{play_pid_file}"
       end
 
       task :restart, :roles => :app, :except => { :no_release => true } do
@@ -144,7 +145,7 @@ namespace :play do
       end
 
       task :status, :roles => :app, :except => { :no_release => true } do
-        run "cd #{current_path} && #{play_cmd} status --pid_file=#{play_pid_file}"
+        run "cd #{release_path} && #{play_cmd} status --pid_file=#{play_pid_file}"
       end	
     end
 
@@ -156,7 +157,7 @@ namespace :play do
         File.join('/etc', 'init', "#{play_upstart_service}.conf")
       end
       _cset :play_upstart_config_template, File.join(File.dirname(__FILE__), 'templates', 'upstart.erb')
-      _cset :play_upstart_options, %w(--deps)
+      _cset :play_upstart_options, []
       _cset :play_upstart_runner do
         user
       end
@@ -186,6 +187,17 @@ namespace :play do
         run "#{sudo} service #{play_upstart_service} status"
       end
     end
+  end
+
+  desc "update play runtime environment"
+  task :update, :roles => :app, :except => { :no_release => true } do
+    transaction {
+      dependencies
+    }
+  end
+
+  task :dependencies, :roles => :app, :except => { :no_release => true } do
+    run "cd #{release_path} && #{play_cmd} dependencies --forProd"
   end
 
   desc "start play service"
