@@ -51,6 +51,7 @@ namespace :play do
   _cset :play_zip_url do
     "http://download.playframework.org/releases/#{File.basename(play_zip_file)}"
   end
+  _cset :play_preserve_zip, true
   _cset :play_zip_file do
     File.join(shared_path, "play-#{play_version}.zip")
   end
@@ -60,8 +61,6 @@ namespace :play do
   _cset :play_cmd do
     File.join(play_path, 'play')
   end
-  _cset :play_preserve_zip, true
-  _cset :play_modules, []
   _cset :play_daemonize_method, :play
   _cset :play_daemon do
     daemonize.__send__(play_daemonize_method)
@@ -76,17 +75,16 @@ namespace :play do
       transaction {
         setup_ivy if fetch(:play_setup_ivy, false)
         install_play
-        install_modules
       }
       transaction {
         play_daemon.setup
       }
     end
 
+    _cset :play_ivy_settings_template, File.join(File.dirname(__FILE__), 'templates', 'ivysettings.erb')
     _cset :play_ivy_settings do
       File.join(capture('echo $HOME').chomp, '.ivy2', 'ivysettings.xml')
     end
-    _cset :play_ivy_settings_template, File.join(File.dirname(__FILE__), 'templates', 'ivysettings.erb')
     task :setup_ivy, :roles => :app, :except => { :no_release => true } do
       tempfile = File.join('/tmp', File.basename(play_ivy_settings))
       on_rollback {
@@ -100,15 +98,15 @@ namespace :play do
     end
 
     task :install_play, :roles => :app, :except => { :no_release => true } do
+      temp_zip = File.join('/tmp', File.basename(play_zip_file))
+      temp_dir = File.join('/tmp', File.basename(play_zip_file, '.zip'))
       on_rollback {
-        files = [ play_path ]
+        files = [ play_path, temp_zip, temp_dir ]
         files << play_zip_file unless play_preserve_zip
         run "#{try_sudo} rm -rf #{files.join(' ')}"
       }
       run "#{try_sudo} rm -f #{play_zip_file}" unless play_preserve_zip
 
-      temp_zip = File.join('/tmp', File.basename(play_zip_file))
-      temp_dir = File.join('/tmp', File.basename(play_zip_file, '.zip'))
       run <<-E
         ( test -f #{play_zip_file} ||
           ( wget --no-verbose -O #{temp_zip} #{play_zip_url} && #{try_sudo} mv -f #{temp_zip} #{play_zip_file}; true ) ) &&
@@ -117,12 +115,6 @@ namespace :play do
         test -x #{play_cmd};
       E
       run "#{try_sudo} rm -f #{play_zip_file}" unless play_preserve_zip
-    end
-
-    task :install_modules, :roles => :app, :except => { :no_release => true } do
-      if 0 < play_modules.length
-        run "#{play_cmd} install #{play_modules.join(' ')}"
-      end
     end
   end
 
@@ -200,11 +192,16 @@ namespace :play do
 
     transaction {
       dependencies
+      precompile if fetch(:play_use_precompile, true)
     }
   end
 
   task :dependencies, :roles => :app, :except => { :no_release => true } do
     run "cd #{release_path} && #{play_cmd} dependencies --forProd"
+  end
+
+  task :precompile, :roles => :app, :except => { :no_release => true } do
+    run "cd #{release_path} && #{play_cmd} precompile"
   end
 
   desc "start play service"
