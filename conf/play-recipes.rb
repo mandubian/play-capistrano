@@ -191,6 +191,9 @@ namespace :play do
 
   desc "update play runtime environment"
   task :update, :roles => :app, :except => { :no_release => true } do
+    # FIXME: made tmp/ group writable since deploy:finalize_update creates non-group-writable tmp/
+    run "#{try_sudo} chmod g+w #{release_path}/tmp" if fetch(:group_writable, true)
+
     transaction {
       dependencies
     }
