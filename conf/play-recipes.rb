@@ -129,11 +129,11 @@ namespace :play do
         options = []
         options << "-Xss2048k"
         options << "--%prod"
-        options << "-Dprecompiled=true" if play_use_precompile
         options
       end
       task :start, :roles => :app, :except => { :no_release => true } do
         run "rm -f #{play_pid_file}" # FIXME: should check if the pid is active
+        play_start_options << "-Dprecompiled=true" if play_use_precompile
         run "cd #{release_path} && nohup #{play_cmd} start --pid_file=#{play_pid_file} #{play_start_options.join(' ')}"
       end
 
@@ -161,7 +161,8 @@ namespace :play do
       _cset :play_upstart_config_template, File.join(File.dirname(__FILE__), 'templates', 'upstart.erb')
       _cset :play_upstart_options do
         options = []
-        options << "-Dprecompiled=true" if play_use_precompile
+        options << "-Xss2048k"
+        options << "--%prod"
         options
       end
       _cset :play_upstart_runner do
@@ -173,6 +174,7 @@ namespace :play do
         on_rollback {
           run "rm -f #{tempfile}"
         }
+        play_upstart_options << "-Dprecompiled=true" if play_use_precompile
         template = File.read(play_upstart_config_template)
         result = ERB.new(template).result(binding)
         put result, tempfile
