@@ -68,6 +68,7 @@ namespace :play do
   _cset :play_pid_file do
     fetch(:app_pid, File.join(shared_path, 'pids', 'server.pid')) # for backward compatibility
   end
+  _cset :play_use_precompile, true # performe precompilation before restarting service if true
 
   namespace :setup do
     desc "install play if needed"
@@ -124,9 +125,16 @@ namespace :play do
         # nop
       end
 
+      _cset :play_start_options do
+        options = []
+        options << "-Xss2048k"
+        options << "--%prod"
+        options << "-Dprecompiled=true" if play_use_precompile
+        options
+      end
       task :start, :roles => :app, :except => { :no_release => true } do
         run "rm -f #{play_pid_file}" # FIXME: should check if the pid is active
-        run "cd #{release_path} && nohup #{play_cmd} start -Xss2048k --pid_file=#{play_pid_file} --%prod"
+        run "cd #{release_path} && nohup #{play_cmd} start --pid_file=#{play_pid_file} #{play_start_options.join(' ')}"
       end
 
       task :stop, :roles => :app, :except => { :no_release => true } do
@@ -151,7 +159,11 @@ namespace :play do
         File.join('/etc', 'init', "#{play_upstart_service}.conf")
       end
       _cset :play_upstart_config_template, File.join(File.dirname(__FILE__), 'templates', 'upstart.erb')
-      _cset :play_upstart_options, []
+      _cset :play_upstart_options do
+        options = []
+        options << "-Dprecompiled=true" if play_use_precompile
+        options
+      end
       _cset :play_upstart_runner do
         user
       end
@@ -192,7 +204,7 @@ namespace :play do
 
     transaction {
       dependencies
-      precompile if fetch(:play_use_precompile, true)
+      precompile if play_use_precompile
     }
   end
 
