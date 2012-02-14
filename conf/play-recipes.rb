@@ -44,7 +44,7 @@ namespace :deploy do
 end
 
 after 'deploy:setup', 'play:setup'
-after 'deploy:update', 'play:update'
+after 'deploy:finalize_update', 'play:update'
 
 namespace :play do
   _cset :play_version, '1.2.4'
