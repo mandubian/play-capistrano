@@ -43,6 +43,7 @@ def execute(**kargs):
 	        shutil.copyfile(os.path.join(module, "Capfile"), os.path.join(app.path, "Capfile"))
 	        print "Copying Capistrano Play recipes..."
 	        shutil.copyfile(os.path.join(module, "conf", "play-recipes.rb"), os.path.join(app.path, "conf", "play-recipes.rb"))
+	        shutil.copytree(os.path.join(module, "conf", "templates"), os.path.join(app.path, "conf", "templates"))
 		
 		if(not os.path.exists(os.path.join(app.path, "conf", "deploy.rb"))):
 			print "Copying Capistrano Play deploy config..."
