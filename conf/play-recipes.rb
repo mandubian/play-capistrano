@@ -227,10 +227,10 @@ namespace :play do
   end
 
   task :dependencies_locally, :roles => :app, :except => { :no_release => true } do
-    run_locally "#{play_cmd_local} dependencies --forProd --sync"
+    logger.info(run_locally("#{play_cmd_local} dependencies --forProd --sync"))
     run "mkdir -p #{release_path}/lib #{release_path}/modules"
     find_servers_for_task(current_task).each { |server|
-      run_locally <<-E
+      logger.info(run_locally(<<-E))
         rsync -lrt --chmod=u+rwX,go+rX ./lib/ #{user}@#{server.host}:#{release_path}/lib/ &&
         rsync -lrt --chmod=u+rwX,go+rX ./modules/ #{user}@#{server.host}:#{release_path}/modules/;
       E
@@ -244,12 +244,12 @@ namespace :play do
 
   task :precompile_locally, :roles => :app, :except => { :no_release => true } do
     on_rollback {
-      run_locally "#{play_cmd_local} clean"
+      logger.info(run_locally("#{play_cmd_local} clean"))
     }
-    run_locally "#{play_cmd_local} precompile"
+    logger.info(run_locally("#{play_cmd_local} precompile"))
     run "mkdir -p #{release_path}/precompiled"
     find_servers_for_task(current_task).each { |server|
-      run_locally "rsync -lrt --chmod=u+rwX,go+rX ./precompiled/ #{user}@#{server.host}:#{release_path}/precompiled/"
+      logger.info(run_locally("rsync -lrt --chmod=u+rwX,go+rX ./precompiled/ #{user}@#{server.host}:#{release_path}/precompiled/"))
     }
     run "chmod -R g+w #{release_path}/precompiled" if fetch(:group_writable, true)
   end
