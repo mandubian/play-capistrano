@@ -70,6 +70,9 @@ namespace :play do
   end
   _cset :play_use_precompile, true # performe precompilation before restarting service if true
 
+  _cset :play_cmd_local, 'play' # TODO: implement automated play install for local
+  _cset :play_precompile_locally, false # perform precompilation on localhost
+
   namespace :setup do
     desc "install play if needed"
     task :default, :except => { :no_release => true } do
@@ -205,17 +208,50 @@ namespace :play do
     run "#{try_sudo} chmod g+w #{release_path}/tmp" if fetch(:group_writable, true)
 
     transaction {
-      dependencies
-      precompile if play_use_precompile
+      if play_use_precompile
+        if play_precompile_locally
+          dependencies_locally
+          precompile_locally
+        else
+          dependencies
+          precompile
+        end
+      else
+        dependencies
+      end
     }
   end
 
   task :dependencies, :roles => :app, :except => { :no_release => true } do
-    run "cd #{release_path} && #{play_cmd} dependencies --forProd"
+    run "cd #{release_path} && #{play_cmd} dependencies --forProd --sync"
+  end
+
+  task :dependencies_locally, :roles => :app, :except => { :no_release => true } do
+    run_locally "#{play_cmd_local} dependencies --forProd --sync"
+    run "mkdir -p #{release_path}/lib #{release_path}/modules"
+    find_servers_for_task(current_task).each { |server|
+      run_locally <<-E
+        rsync -lrt --chmod=u+rwX,go+rX ./lib/ #{user}@#{server.host}:#{release_path}/lib/ &&
+        rsync -lrt --chmod=u+rwX,go+rX ./modules/ #{user}@#{server.host}:#{release_path}/modules/;
+      E
+    }
+    run "chmod -R g+w #{release_path}/lib #{release_path}/modules" if fetch(:group_writable, true)
   end
 
   task :precompile, :roles => :app, :except => { :no_release => true } do
     run "cd #{release_path} && #{play_cmd} precompile"
+  end
+
+  task :precompile_locally, :roles => :app, :except => { :no_release => true } do
+    on_rollback {
+      run_locally "#{play_cmd_local} clean"
+    }
+    run_locally "#{play_cmd_local} precompile"
+    run "mkdir -p #{release_path}/precompiled"
+    find_servers_for_task(current_task).each { |server|
+      run_locally "rsync -lrt --chmod=u+rwX,go+rX ./precompiled/ #{user}@#{server.host}:#{release_path}/precompiled/"
+    }
+    run "chmod -R g+w #{release_path}/precompiled" if fetch(:group_writable, true)
   end
 
   desc "start play service"
