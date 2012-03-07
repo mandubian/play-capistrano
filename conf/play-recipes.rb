@@ -58,8 +58,11 @@ namespace :play do
   _cset :play_path do
     File.join(shared_path, "play-#{play_version}")
   end
-  _cset :play_cmd do
+  _cset :play_bin do
     File.join(play_path, 'play')
+  end
+  _cset :play_cmd do # override this if you want to set env vars (e.g. JAVA_HOME) for play
+    play_bin
   end
   _cset :play_daemonize_method, :play
   _cset :play_daemon do
@@ -76,8 +79,11 @@ namespace :play do
   _cset :play_path_local do
     File.join(".", "play-#{play_version}")
   end
-  _cset :play_cmd_local do
+  _cset :play_bin_local do
     File.join(play_path_local, 'play')
+  end
+  _cset :play_cmd_local do # override this if you want to set env vars (e.g. JAVA_HOME) for play
+    play_bin_local
   end
   _cset :play_precompile_locally, false # perform precompilation on localhost
 
@@ -133,12 +139,12 @@ namespace :play do
       run "#{try_sudo} rm -f #{play_zip_file}" unless play_preserve_zip
 
       run <<-E
-        if ! test -x #{play_cmd}; then
+        if ! test -x #{play_bin}; then
           ( test -f #{play_zip_file} ||
             ( wget --no-verbose -O #{temp_zip} #{play_zip_url} && #{try_sudo} mv -f #{temp_zip} #{play_zip_file}; true ) ) &&
           ( test -d #{play_path} ||
             ( unzip #{play_zip_file} -d #{File.dirname(temp_dir)} && #{try_sudo} mv -f #{temp_dir} #{play_path}; true ) ) &&
-          test -x #{play_cmd};
+          test -x #{play_bin};
         fi;
       E
       run "#{try_sudo} rm -f #{play_zip_file}" unless play_preserve_zip
@@ -150,11 +156,11 @@ namespace :play do
         logger.info(run_locally("rm -rf #{files.join(' ')}"))
       }
       logger.info(run_locally(<<-E))
-        if ! test -x #{play_cmd_local}; then
+        if ! test -x #{play_bin_local}; then
           ( test -f #{play_zip_file_local} ||
             ( wget --no-verbose -O #{play_zip_file_local} #{play_zip_url} ) ) &&
           ( test -d #{play_path_local} || unzip #{play_zip_file_local} -d #{File.dirname(play_path_local)} ) &&
-          test -x #{play_cmd_local};
+          test -x #{play_bin_local};
         fi;
       E
     end
