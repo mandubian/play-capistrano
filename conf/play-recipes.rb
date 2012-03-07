@@ -138,6 +138,7 @@ namespace :play do
             ( wget --no-verbose -O #{temp_zip} #{play_zip_url} && #{try_sudo} mv -f #{temp_zip} #{play_zip_file}; true ) ) &&
           ( test -d #{play_path} ||
             ( unzip #{play_zip_file} -d #{File.dirname(temp_dir)} && #{try_sudo} mv -f #{temp_dir} #{play_path}; true ) ) &&
+          test -x #{play_cmd};
         fi;
       E
       run "#{try_sudo} rm -f #{play_zip_file}" unless play_preserve_zip
@@ -152,7 +153,8 @@ namespace :play do
         if ! test -x #{play_cmd_local}; then
           ( test -f #{play_zip_file_local} ||
             ( wget --no-verbose -O #{play_zip_file_local} #{play_zip_url} ) ) &&
-          ( test -d #{play_path_local} || unzip #{play_zip_file_local} -d #{File.dirname(play_path_local)} );
+          ( test -d #{play_path_local} || unzip #{play_zip_file_local} -d #{File.dirname(play_path_local)} ) &&
+          test -x #{play_cmd_local};
         fi;
       E
     end
