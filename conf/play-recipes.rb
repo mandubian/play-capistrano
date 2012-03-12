@@ -78,10 +78,10 @@ namespace :play do
   _cset :play_use_precompile, true # performe precompilation before restarting service if true
 
   _cset :play_zip_file_local do
-    File.join(File.absolute_path('.'), 'tools', 'play', "play-#{play_version}.zip")
+    File.join(File.expand_path('.'), 'tools', 'play', "play-#{play_version}.zip")
   end
   _cset :play_path_local do
-    File.join(File.absolute_path('.'), 'tools', 'play', "play-#{play_version}")
+    File.join(File.expand_path('.'), 'tools', 'play', "play-#{play_version}")
   end
   _cset :play_bin_local do
     File.join(play_path_local, 'play')
