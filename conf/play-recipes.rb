@@ -61,8 +61,12 @@ namespace :play do
   _cset :play_bin do
     File.join(play_path, 'play')
   end
-  _cset :play_cmd do # override this if you want to set env vars (e.g. JAVA_HOME) for play
-    play_bin
+  _cset :play_cmd do
+    if fetch(:play_java_home, nil)
+      "env JAVA_HOME=#{play_java_home} #{play_bin}"
+    else
+      play_bin
+    end
   end
   _cset :play_daemonize_method, :play
   _cset :play_daemon do
@@ -82,8 +86,12 @@ namespace :play do
   _cset :play_bin_local do
     File.join(play_path_local, 'play')
   end
-  _cset :play_cmd_local do # override this if you want to set env vars (e.g. JAVA_HOME) for play
-    play_bin_local
+  _cset :play_cmd_local do
+    if fetch(:play_java_home_local, nil)
+      "env JAVA_HOME=#{play_java_home_local} #{play_bin_local}"
+    else
+      play_bin_local
+    end
   end
   _cset :play_precompile_locally, false # perform precompilation on localhost
 
