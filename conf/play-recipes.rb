@@ -53,10 +53,10 @@ namespace :play do
   end
   _cset :play_preserve_zip, true
   _cset :play_zip_file do
-    File.join(shared_path, "play-#{play_version}.zip")
+    File.join(shared_path, 'tools', 'play', "play-#{play_version}.zip")
   end
   _cset :play_path do
-    File.join(shared_path, "play-#{play_version}")
+    File.join(shared_path, 'tools', 'play', "play-#{play_version}")
   end
   _cset :play_bin do
     File.join(play_path, 'play')
@@ -74,10 +74,10 @@ namespace :play do
   _cset :play_use_precompile, true # performe precompilation before restarting service if true
 
   _cset :play_zip_file_local do
-    File.join(".", "play-#{play_version}.zip")
+    File.join(File.absolute_path('.'), 'tools', 'play', "play-#{play_version}.zip")
   end
   _cset :play_path_local do
-    File.join(".", "play-#{play_version}")
+    File.join(File.absolute_path('.'), 'tools', 'play', "play-#{play_version}")
   end
   _cset :play_bin_local do
     File.join(play_path_local, 'play')
@@ -116,7 +116,7 @@ namespace :play do
       result = ERB.new(template).result(binding)
       run "test -d #{File.dirname(play_ivy_settings)} || mkdir -p #{File.dirname(play_ivy_settings)}"
       put result, tempfile
-      run "diff #{tempfile} #{play_ivy_settings} || mv -f #{tempfile} #{play_ivy_settings}"
+      run "diff #{play_ivy_settings} #{tempfile} || mv -f #{tempfile} #{play_ivy_settings}"
     end
 
     _cset :play_ivy_settings_local, File.join(ENV['HOME'], '.ivy2', 'ivysettings.xml')
@@ -138,14 +138,15 @@ namespace :play do
       }
       run "#{try_sudo} rm -f #{play_zip_file}" unless play_preserve_zip
 
+      dirs = [ File.dirname(play_zip_file), File.dirname(play_path) ].uniq()
       run <<-E
         if ! test -x #{play_bin}; then
-          ( test -f #{play_zip_file} ||
-            ( wget --no-verbose -O #{temp_zip} #{play_zip_url} && #{try_sudo} mv -f #{temp_zip} #{play_zip_file}; true ) ) &&
-          ( test -d #{play_path} ||
-            ( unzip #{play_zip_file} -d #{File.dirname(temp_dir)} && #{try_sudo} mv -f #{temp_dir} #{play_path}; true ) ) &&
+          mkdir -p #{dirs.join(' ')} &&
+          ( test -f #{play_zip_file} || ( wget --no-verbose -O #{temp_zip} #{play_zip_url} && #{try_sudo} mv -f #{temp_zip} #{play_zip_file}; true ) ) &&
+          ( test -d #{play_path} || ( unzip -q #{play_zip_file} -d #{File.dirname(temp_dir)} && #{try_sudo} mv -f #{temp_dir} #{play_path}; true ) ) &&
           test -x #{play_bin};
         fi;
+        #{play_cmd} version;
       E
       run "#{try_sudo} rm -f #{play_zip_file}" unless play_preserve_zip
     end
@@ -155,13 +156,15 @@ namespace :play do
         files = [ play_path_local, play_zip_file_local ]
         logger.info(run_locally("rm -rf #{files.join(' ')}"))
       }
+      dirs = [ File.dirname(play_zip_file_local), File.dirname(play_path_local) ].uniq()
       logger.info(run_locally(<<-E))
         if ! test -x #{play_bin_local}; then
-          ( test -f #{play_zip_file_local} ||
-            ( wget --no-verbose -O #{play_zip_file_local} #{play_zip_url} ) ) &&
-          ( test -d #{play_path_local} || unzip #{play_zip_file_local} -d #{File.dirname(play_path_local)} ) &&
+          mkdir -p #{dirs.join(' ')} &&
+          ( test -f #{play_zip_file_local} || ( wget --no-verbose -O #{play_zip_file_local} #{play_zip_url} ) ) &&
+          ( test -d #{play_path_local} || unzip -q #{play_zip_file_local} -d #{File.dirname(play_path_local)} ) &&
           test -x #{play_bin_local};
         fi;
+        #{play_cmd_local} version;
       E
     end
   end
@@ -225,7 +228,7 @@ namespace :play do
         template = File.read(play_upstart_config_template)
         result = ERB.new(template).result(binding)
         put result, tempfile
-        run "diff #{tempfile} #{play_upstart_config} || #{sudo} mv -f #{tempfile} #{play_upstart_config}"
+        run "diff #{play_upstart_config} #{tempfile} || #{sudo} mv -f #{tempfile} #{play_upstart_config}"
       end
 
       task :start, :roles => :app, :except => { :no_release => true } do
