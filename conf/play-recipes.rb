@@ -122,7 +122,10 @@ namespace :play do
       }
       template = File.read(play_ivy_settings_template)
       result = ERB.new(template).result(binding)
-      run "test -d #{File.dirname(play_ivy_settings)} || mkdir -p #{File.dirname(play_ivy_settings)}"
+      run <<-E
+        ( test -d #{File.dirname(play_ivy_settings)} || mkdir -p #{File.dirname(play_ivy_settings)} ) &&
+        ( test -f #{play_ivy_settings} && mv -f #{play_ivy_settings} #{play_ivy_settings}.orig; true );
+      E
       put result, tempfile
       run "diff #{play_ivy_settings} #{tempfile} || mv -f #{tempfile} #{play_ivy_settings}"
     end
@@ -131,8 +134,10 @@ namespace :play do
     task :setup_ivy_locally, :except => { :no_release => true } do
       template = File.read(play_ivy_settings_template)
       result = ERB.new(template).result(binding)
-      logger.info(run_locally("test -d #{File.dirname(play_ivy_settings_local)} || mkdir -p #{File.dirname(play_ivy_settings_local)}"))
-      logger.info(run_locally("test -f #{play_ivy_settings_local} && mv -f #{play_ivy_settings_local} #{play_ivy_settings_local}.orig"))
+      logger.info(run_locally(<<-E))
+        ( test -d #{File.dirname(play_ivy_settings_local)} || mkdir -p #{File.dirname(play_ivy_settings_local)} ) &&
+        ( test -f #{play_ivy_settings_local} && mv -f #{play_ivy_settings_local} #{play_ivy_settings_local}.orig; true );
+      E
       File.open(play_ivy_settings_local, 'w') { |fp| fp.write(result) }
     end
 
