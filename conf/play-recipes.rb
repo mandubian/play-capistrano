@@ -53,13 +53,20 @@ namespace :play do
   end
   _cset :play_preserve_zip, true
   _cset :play_zip_file do
-    File.join(shared_path, "play-#{play_version}.zip")
+    File.join(shared_path, 'tools', 'play', "play-#{play_version}.zip")
   end
   _cset :play_path do
-    File.join(shared_path, "play-#{play_version}")
+    File.join(shared_path, 'tools', 'play', "play-#{play_version}")
+  end
+  _cset :play_bin do
+    File.join(play_path, 'play')
   end
   _cset :play_cmd do
-    File.join(play_path, 'play')
+    if fetch(:play_java_home, nil)
+      "env JAVA_HOME=#{play_java_home} #{play_bin}"
+    else
+      play_bin
+    end
   end
   _cset :play_daemonize_method, :play
   _cset :play_daemon do
@@ -70,12 +77,34 @@ namespace :play do
   end
   _cset :play_use_precompile, true # performe precompilation before restarting service if true
 
+  _cset :play_zip_file_local do
+    File.join(File.expand_path('.'), 'tools', 'play', "play-#{play_version}.zip")
+  end
+  _cset :play_path_local do
+    File.join(File.expand_path('.'), 'tools', 'play', "play-#{play_version}")
+  end
+  _cset :play_bin_local do
+    File.join(play_path_local, 'play')
+  end
+  _cset :play_cmd_local do
+    if fetch(:play_java_home_local, nil)
+      "env JAVA_HOME=#{play_java_home_local} #{play_bin_local}"
+    else
+      play_bin_local
+    end
+  end
+  _cset :play_precompile_locally, false # perform precompilation on localhost
+
   namespace :setup do
     desc "install play if needed"
     task :default, :except => { :no_release => true } do
       transaction {
         setup_ivy if fetch(:play_setup_ivy, false)
         install_play
+        if play_precompile_locally
+          setup_ivy_locally if fetch(:play_setup_ivy_locally, false)
+          install_play_locally
+        end
       }
       transaction {
         play_daemon.setup
@@ -93,9 +122,23 @@ namespace :play do
       }
       template = File.read(play_ivy_settings_template)
       result = ERB.new(template).result(binding)
-      run "test -d #{File.dirname(play_ivy_settings)} || mkdir -p #{File.dirname(play_ivy_settings)}"
+      run <<-E
+        ( test -d #{File.dirname(play_ivy_settings)} || mkdir -p #{File.dirname(play_ivy_settings)} ) &&
+        ( test -f #{play_ivy_settings} && mv -f #{play_ivy_settings} #{play_ivy_settings}.orig; true );
+      E
       put result, tempfile
-      run "diff #{tempfile} #{play_ivy_settings} || mv -f #{tempfile} #{play_ivy_settings}"
+      run "diff #{play_ivy_settings} #{tempfile} || mv -f #{tempfile} #{play_ivy_settings}"
+    end
+
+    _cset :play_ivy_settings_local, File.join(ENV['HOME'], '.ivy2', 'ivysettings.xml')
+    task :setup_ivy_locally, :except => { :no_release => true } do
+      template = File.read(play_ivy_settings_template)
+      result = ERB.new(template).result(binding)
+      logger.info(run_locally(<<-E))
+        ( test -d #{File.dirname(play_ivy_settings_local)} || mkdir -p #{File.dirname(play_ivy_settings_local)} ) &&
+        ( test -f #{play_ivy_settings_local} && mv -f #{play_ivy_settings_local} #{play_ivy_settings_local}.orig; true );
+      E
+      File.open(play_ivy_settings_local, 'w') { |fp| fp.write(result) }
     end
 
     task :install_play, :roles => :app, :except => { :no_release => true } do
@@ -108,14 +151,34 @@ namespace :play do
       }
       run "#{try_sudo} rm -f #{play_zip_file}" unless play_preserve_zip
 
+      dirs = [ File.dirname(play_zip_file), File.dirname(play_path) ].uniq()
       run <<-E
-        ( test -f #{play_zip_file} ||
-          ( wget --no-verbose -O #{temp_zip} #{play_zip_url} && #{try_sudo} mv -f #{temp_zip} #{play_zip_file}; true ) ) &&
-        ( test -d #{play_path} ||
-          ( unzip #{play_zip_file} -d /tmp && #{try_sudo} mv -f #{temp_dir} #{play_path}; true ) ) &&
-        test -x #{play_cmd};
+        if ! test -x #{play_bin}; then
+          mkdir -p #{dirs.join(' ')} &&
+          ( test -f #{play_zip_file} || ( wget --no-verbose -O #{temp_zip} #{play_zip_url} && #{try_sudo} mv -f #{temp_zip} #{play_zip_file}; true ) ) &&
+          ( test -d #{play_path} || ( unzip -q #{play_zip_file} -d #{File.dirname(temp_dir)} && #{try_sudo} mv -f #{temp_dir} #{play_path}; true ) ) &&
+          test -x #{play_bin};
+        fi;
+        #{play_cmd} version;
       E
       run "#{try_sudo} rm -f #{play_zip_file}" unless play_preserve_zip
+    end
+
+    task :install_play_locally, :except => { :no_release => true } do # TODO: make install_play and install_play_locally together
+      on_rollback {
+        files = [ play_path_local, play_zip_file_local ]
+        logger.info(run_locally("rm -rf #{files.join(' ')}"))
+      }
+      dirs = [ File.dirname(play_zip_file_local), File.dirname(play_path_local) ].uniq()
+      logger.info(run_locally(<<-E))
+        if ! test -x #{play_bin_local}; then
+          mkdir -p #{dirs.join(' ')} &&
+          ( test -f #{play_zip_file_local} || ( wget --no-verbose -O #{play_zip_file_local} #{play_zip_url} ) ) &&
+          ( test -d #{play_path_local} || unzip -q #{play_zip_file_local} -d #{File.dirname(play_path_local)} ) &&
+          test -x #{play_bin_local};
+        fi;
+        #{play_cmd_local} version;
+      E
     end
   end
 
@@ -178,7 +241,7 @@ namespace :play do
         template = File.read(play_upstart_config_template)
         result = ERB.new(template).result(binding)
         put result, tempfile
-        run "diff #{tempfile} #{play_upstart_config} || #{sudo} mv -f #{tempfile} #{play_upstart_config}"
+        run "diff #{play_upstart_config} #{tempfile} || #{sudo} mv -f #{tempfile} #{play_upstart_config}"
       end
 
       task :start, :roles => :app, :except => { :no_release => true } do
@@ -205,17 +268,52 @@ namespace :play do
     run "#{try_sudo} chmod g+w #{release_path}/tmp" if fetch(:group_writable, true)
 
     transaction {
-      dependencies
-      precompile if play_use_precompile
+      if play_use_precompile
+        if play_precompile_locally
+          setup.setup_ivy_locally if fetch(:play_setup_ivy_locally, false)
+          setup.install_play_locally
+          dependencies_locally
+          precompile_locally
+        else
+          dependencies
+          precompile
+        end
+      else
+        dependencies
+      end
     }
   end
 
   task :dependencies, :roles => :app, :except => { :no_release => true } do
-    run "cd #{release_path} && #{play_cmd} dependencies --forProd"
+    run "cd #{release_path} && #{play_cmd} dependencies --forProd --sync"
+  end
+
+  task :dependencies_locally, :roles => :app, :except => { :no_release => true } do
+    logger.info(run_locally("#{play_cmd_local} dependencies --forProd --sync"))
+    run "mkdir -p #{release_path}/lib #{release_path}/modules"
+    find_servers_for_task(current_task).each { |server|
+      logger.info(run_locally(<<-E))
+        rsync -lrt --chmod=u+rwX,go+rX ./lib/ #{user}@#{server.host}:#{release_path}/lib/ &&
+        rsync -lrt --chmod=u+rwX,go+rX ./modules/ #{user}@#{server.host}:#{release_path}/modules/;
+      E
+    }
+    run "chmod -R g+w #{release_path}/lib #{release_path}/modules" if fetch(:group_writable, true)
   end
 
   task :precompile, :roles => :app, :except => { :no_release => true } do
     run "cd #{release_path} && #{play_cmd} precompile"
+  end
+
+  task :precompile_locally, :roles => :app, :except => { :no_release => true } do
+    on_rollback {
+      logger.info(run_locally("#{play_cmd_local} clean"))
+    }
+    logger.info(run_locally("#{play_cmd_local} precompile"))
+    run "mkdir -p #{release_path}/precompiled"
+    find_servers_for_task(current_task).each { |server|
+      logger.info(run_locally("rsync -lrt --chmod=u+rwX,go+rX ./precompiled/ #{user}@#{server.host}:#{release_path}/precompiled/"))
+    }
+    run "chmod -R g+w #{release_path}/precompiled" if fetch(:group_writable, true)
   end
 
   desc "start play service"

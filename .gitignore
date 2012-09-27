@@ -9,3 +9,5 @@ lib
 dist
 *.pyc
 *.pyo
+/play-*/
+/play-*.zip
